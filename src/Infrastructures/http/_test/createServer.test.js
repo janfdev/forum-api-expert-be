@@ -3,6 +3,7 @@ import pool from '../../database/postgres/pool.js';
 import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
 import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
 import ThreadsTableTestHelper from '../../../../tests/ThreadsTableTestHelper.js';
+import CommentTableTestHelper from '../../../../tests/CommentTableTestHelper.js';
 import container from '../../container.js';
 import createServer from '../createServer.js';
 import AuthenticationTokenManager from '../../../Applications/security/AuthenticationTokenManager.js';
@@ -13,9 +14,10 @@ describe('HTTP server', () => {
   });
 
   afterEach(async () => {
+    await CommentTableTestHelper.cleanTable();
+    await ThreadsTableTestHelper.cleanTable();
     await UsersTableTestHelper.cleanTable();
     await AuthenticationsTableTestHelper.cleanTable();
-    await ThreadsTableTestHelper.cleanTable();
   });
 
   it('should response 404 when request unregistered route', async () => {
@@ -46,6 +48,12 @@ describe('HTTP server', () => {
       expect(response.status).toEqual(201);
       expect(response.body.status).toEqual('success');
       expect(response.body.data.addedUser).toBeDefined();
+
+      const { id: addedUserId, username, fullname } = response.body.data.addedUser;
+      const users = await UsersTableTestHelper.findUsersById(addedUserId);
+      expect(users).toHaveLength(1);
+      expect(users[0].username).toEqual(username);
+      expect(users[0].fullname).toEqual(fullname);
     });
 
     it('should response 400 when request payload not contain needed property', async () => {
@@ -244,6 +252,8 @@ describe('HTTP server', () => {
       expect(response.status).toEqual(200);
       expect(response.body.status).toEqual('success');
       expect(response.body.data.accessToken).toBeDefined();
+      expect(typeof response.body.data.accessToken).toEqual('string');
+      expect(response.body.data.accessToken.length).toBeGreaterThan(0);
     });
 
     it('should return 400 payload not contain refresh token', async () => {
@@ -298,6 +308,9 @@ describe('HTTP server', () => {
 
       expect(response.status).toEqual(200);
       expect(response.body.status).toEqual('success');
+
+      const tokens = await AuthenticationsTableTestHelper.findToken(refreshToken);
+      expect(tokens).toHaveLength(0);
     });
 
     it('should response 400 if refresh token not registered in database', async () => {
@@ -351,6 +364,13 @@ describe('HTTP server', () => {
       expect(response.body.data.addedThread).toBeDefined();
       expect(response.body.data.addedThread.title).toEqual(requestPayload.title);
       expect(response.body.data.addedThread.owner).toEqual('user-123');
+
+      const { id: addedThreadId } = response.body.data.addedThread;
+      const threads = await ThreadsTableTestHelper.findThreadById(addedThreadId);
+      expect(threads).toHaveLength(1);
+      expect(threads[0].title).toEqual(requestPayload.title);
+      expect(threads[0].body).toEqual(requestPayload.body);
+      expect(threads[0].owner).toEqual('user-123');
     });
 
     it('should response 400 when payload not contain needed property', async () => {
@@ -377,16 +397,16 @@ describe('HTTP server', () => {
       expect(response.body.message).toEqual('harus mengirimkan title dan body thread');
     });
 
-    it('should response 403 when access token not provided', async () => {
+    it('should response 401 when access token not provided', async () => {
       const app = await createServer(container);
 
       const response = await request(app)
         .post('/threads')
         .send({ title: 'sebuah thread', body: 'isi thread' });
 
-      expect(response.status).toEqual(403);
+      expect(response.status).toEqual(401);
       expect(response.body.status).toEqual('fail');
-      expect(response.body.message).toEqual('Anda harus menyertakan access token');
+      expect(response.body.message).toEqual('Missing authentication');
     });
   });
 

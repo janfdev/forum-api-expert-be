@@ -20,6 +20,13 @@ const createServer = async (container) => {
 
   // Global error handler
   app.use((error, req, res, next) => {
+    if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'request body harus berupa JSON yang valid',
+      });
+    }
+
     // bila response tersebut error, tangani sesuai kebutuhan
     const translatedError = DomainErrorTranslator.translate(error);
 
@@ -36,6 +43,7 @@ const createServer = async (container) => {
       status: 'error',
       message: 'terjadi kegagalan pada server kami',
     });
+
   });
 
   // 404 handler

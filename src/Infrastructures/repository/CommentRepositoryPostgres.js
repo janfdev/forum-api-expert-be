@@ -1,5 +1,6 @@
-import AddedComment from '../../Domains/comments/entities/AddedComment';
+import AddedComment from '../../Domains/comments/entities/AddedComment.js';
 import CommentRepository from '../../Domains/comments/CommentRepository.js';
+import AuthorizationError from '../../Commons/exceptions/AuthorizationError.js';
 import NotFoundError from '../../Commons/exceptions/NotFoundError.js';
 
 class CommentRepositoryPostgres extends CommentRepository {
@@ -23,9 +24,22 @@ class CommentRepositoryPostgres extends CommentRepository {
     return new AddedComment(result.rows[0]);
   }
 
-  async deleteComment(commentId) {
+  async verifyCommentInThread(commentId, threadId) {
     const query = {
-      text: 'UPDATE comments SET "isDelete" = true WHERE id = $1 RETURNING id',
+      text: 'SELECT id FROM comments WHERE id = $1 AND "threadId" = $2',
+      values: [commentId, threadId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rowCount) {
+      throw new NotFoundError('comment tidak ditemukan');
+    }
+  }
+
+  async verifyCommentOwner(commentId, owner) {
+    const query = {
+      text: 'SELECT owner FROM comments WHERE id = $1',
       values: [commentId],
     };
 
@@ -34,6 +48,25 @@ class CommentRepositoryPostgres extends CommentRepository {
     if (!result.rowCount) {
       throw new NotFoundError('comment tidak ditemukan');
     }
+
+    if (result.rows[0].owner !== owner) {
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
+  }
+
+  async deleteComment(commentId, threadId) {
+    const query = {
+      text: 'UPDATE comments SET "isDelete" = true WHERE id = $1 AND "threadId" = $2 RETURNING id',
+      values: [commentId, threadId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rowCount) {
+      throw new NotFoundError('comment tidak ditemukan');
+    }
+
+    return result.rows[0];
   }
 }
 

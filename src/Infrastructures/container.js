@@ -27,6 +27,7 @@ import ThreadRepository from '../Domains/threads/ThreadRepository.js';
 import ThreadsRepositoryPostgres from './repository/ThreadsRepositoryPostgres.js';
 import AddThreadUseCase from '../Applications/use_case/AddThreadUseCase.js';
 import AddCommentUseCase from '../Applications/use_case/AddCommentUseCase.js';
+import DeleteCommentUseCase from '../Applications/use_case/DeleteCommentUseCase.js';
 import GetThreadDetailUseCase from '../Applications/use_case/GetThreadDetailUseCase.js';
 import CommentRepository from '../Domains/comments/CommentRepository.js';
 import CommentRepositoryPostgres from './repository/CommentRepositoryPostgres.js';
@@ -203,6 +204,23 @@ container.register([
   {
     key: AddCommentUseCase.name,
     Class: AddCommentUseCase,
+    parameter: {
+      injectType: 'destructuring',
+      dependencies: [
+        {
+          name: 'commentRepository',
+          internal: CommentRepository.name,
+        },
+        {
+          name: 'threadRepository',
+          internal: ThreadRepository.name,
+        },
+      ],
+    },
+  },
+  {
+    key: DeleteCommentUseCase.name,
+    Class: DeleteCommentUseCase,
     parameter: {
       injectType: 'destructuring',
       dependencies: [

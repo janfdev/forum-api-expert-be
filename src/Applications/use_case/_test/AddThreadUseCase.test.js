@@ -19,7 +19,11 @@ describe('AddThreadUseCase', () => {
 
     const mockThreadRepository = new ThreadRepository();
     mockThreadRepository.addNewThread = vi.fn()
-      .mockImplementation(() => Promise.resolve(expectedAddedThread));
+      .mockImplementation(() => Promise.resolve(new AddedThread({
+        id: 'thread-123',
+        title: useCasePayload.title,
+        owner: useCasePayload.owner,
+      })));
 
     const addThreadUseCase = new AddThreadUseCase({
       threadRepository: mockThreadRepository,
@@ -28,6 +32,7 @@ describe('AddThreadUseCase', () => {
     const addedThread = await addThreadUseCase.execute(useCasePayload);
 
     expect(addedThread).toStrictEqual(expectedAddedThread);
+    expect(mockThreadRepository.addNewThread).toHaveBeenCalledTimes(1);
     expect(mockThreadRepository.addNewThread)
       .toHaveBeenCalledWith({
         title: useCasePayload.title,

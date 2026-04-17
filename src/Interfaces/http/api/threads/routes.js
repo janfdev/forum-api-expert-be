@@ -1,7 +1,7 @@
 import express from 'express';
 
 const createThreadsRouter = (handler) => {
-  const router = express.Router();
+  const router = express.Router({ mergeParams: true });
 
   router.post('/', handler.postThreadHandler);
   router.get('/:threadId', handler.getThreadDetailHandler);

@@ -2,6 +2,7 @@ import AddThreadUseCase from '../../../../Applications/use_case/AddThreadUseCase
 import GetThreadDetailUseCase from '../../../../Applications/use_case/GetThreadDetailUseCase.js';
 import AuthenticationTokenManager from '../../../../Applications/security/AuthenticationTokenManager.js';
 import AuthorizationError from '../../../../Commons/exceptions/AuthorizationError.js';
+import AuthenticationError from '../../../../Commons/exceptions/AuthenticationError.js';
 
 class ThreadsHandler {
   constructor(container) {
@@ -56,7 +57,7 @@ class ThreadsHandler {
     const authorizationHeader = req.headers.authorization;
 
     if (!authorizationHeader) {
-      throw new AuthorizationError('Anda harus menyertakan access token');
+      throw new AuthenticationError('Missing authentication');
     }
 
     const [scheme, token] = authorizationHeader.split(' ');

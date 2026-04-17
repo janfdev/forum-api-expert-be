@@ -2,6 +2,8 @@ import AddCommentUseCase from '../../../../Applications/use_case/AddCommentUseCa
 import AuthenticationTokenManager from '../../../../Applications/security/AuthenticationTokenManager.js';
 import AuthorizationError from '../../../../Commons/exceptions/AuthorizationError.js';
 import DeleteCommentUseCase from '../../../../Applications/use_case/DeleteCommentUseCase.js';
+import AuthenticationError from '../../../../Commons/exceptions/AuthenticationError.js';
+import NotFoundError from '../../../../Commons/exceptions/NotFoundError.js';
 
 class CommentsHandler {
   constructor(container) {
@@ -40,6 +42,14 @@ class CommentsHandler {
     try {
       const { threadId, commentId } = req.params;
 
+      if (!threadId) {
+        throw new NotFoundError('thread tidak ditemukan');
+      }
+
+      if (!commentId) {
+        throw new NotFoundError('comment tidak ditemukan');
+      }
+
       const accessToken = this._getAccessToken(req);
       const tokenManager = this._container.getInstance(AuthenticationTokenManager.name);
       const { id: owner } = await tokenManager.decodePayload(accessToken);
@@ -63,7 +73,7 @@ class CommentsHandler {
     const authorizationHeader = req.headers.authorization;
 
     if (!authorizationHeader) {
-      throw new AuthorizationError('Anda harus menyertakan access token');
+      throw new AuthenticationError('Missing authentication');
     }
 
     const [scheme, token] = authorizationHeader.split(' ');
