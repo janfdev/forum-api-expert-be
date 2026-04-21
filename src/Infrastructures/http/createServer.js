@@ -1,4 +1,5 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import ClientError from '../../Commons/exceptions/ClientError.js';
 import DomainErrorTranslator from '../../Commons/exceptions/DomainErrorTranslator.js';
 import users from '../../Interfaces/http/api/users/index.js';
@@ -9,14 +10,28 @@ import comments from '../../Interfaces/http/api/comments/index.js';
 const createServer = async (container) => {
   const app = express();
 
+  // Rate limiting for /threads resource
+  const threadsLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 90, // limit each IP to 90 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    handler: (req, res) => {
+      res.status(429).json({
+        status: 'fail',
+        message: 'terlalu banyak permintaan, silakan coba lagi nanti',
+      });
+    },
+  });
+
   // Middleware for parsing JSON
   app.use(express.json());
 
   // Register routes
   app.use('/users', users(container));
   app.use('/authentications', authentications(container));
-  app.use('/threads', threads(container));
-  app.use('/threads/:threadId/comments', comments(container));
+  app.use('/threads', threadsLimiter, threads(container));
+  app.use('/threads/:threadId/comments', threadsLimiter, comments(container));
 
   // Global error handler
   app.use((error, req, res, next) => {
