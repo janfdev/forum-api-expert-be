@@ -14,6 +14,13 @@ const CommentTableTestHelper = {
     };
 
     await pool.query(query);
+
+    return {
+      id,
+      content,
+      owner,
+      threadId,
+    };
   },
 
   async findCommentsByThreadId(threadId) {
@@ -24,6 +31,15 @@ const CommentTableTestHelper = {
 
     const result = await pool.query(query);
     return result.rows;
+  },
+
+  async deleteCommentById(id) {
+    const query = {
+      text: 'UPDATE comments SET "isDelete" = true WHERE id = $1',
+      values: [id],
+    };
+
+    await pool.query(query);
   },
 
   async cleanTable() {

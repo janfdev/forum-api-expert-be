@@ -10,6 +10,7 @@
     "test": "vitest --run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
+    "test:coverage:run": "vitest run --coverage",
     "migrate": "node-pg-migrate",
     "migrate:create": "node-pg-migrate create",
     "migrate:test": "node-pg-migrate --envPath .test.env",

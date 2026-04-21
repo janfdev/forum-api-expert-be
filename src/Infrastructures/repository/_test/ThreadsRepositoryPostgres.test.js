@@ -40,4 +40,63 @@ describe('ThreadsRepositoryPostgres', () => {
       owner: 'user-123',
     }));
   });
+
+  it('should throw error when thread not found', async () => {
+    const threadRepository = new ThreadsRepositoryPostgres(pool, {});
+
+    await expect(threadRepository.getThreadDetailById('thread-123')).rejects.toThrowError(
+      'thread tidak ditemukan',
+    );
+  });
+
+  it('should return thread detail correctly', async () => {
+    await UsersTableTestHelper.addUser({
+      id: 'user-123',
+      username: 'dicoding',
+      password: 'secret',
+      fullname: 'Dicoding Indonesia',
+    });
+
+    await ThreadsTableTestHelper.addThread({
+      id: 'thread-123',
+      title: 'sebuah thread',
+      body: 'isi thread',
+      owner: 'user-123',
+    });
+
+    const threadRepository = new ThreadsRepositoryPostgres(pool, {});
+    const threadDetail = await threadRepository.getThreadDetailById('thread-123');
+
+    expect(threadDetail).toMatchObject({
+      id: 'thread-123',
+      title: 'sebuah thread',
+      body: 'isi thread',
+      date: expect.any(Date),
+      username: 'dicoding',
+    });
+    expect(threadDetail.comments).toStrictEqual([]);
+  });
+
+  it('should not throw error when thread found', async () => {
+    await UsersTableTestHelper.addUser({
+      id: 'user-123',
+      username: 'dicoding',
+      password: 'secret',
+      fullname: 'Dicoding Indonesia',
+    });
+
+    await ThreadsTableTestHelper.addThread({
+      id: 'thread-123',
+      title: 'sebuah thread',
+      body: 'isi thread',
+      owner: 'user-123',
+    });
+
+    const threadRepository = new ThreadsRepositoryPostgres(pool, {});
+
+    await expect(threadRepository.verifyAvailableThread('thread-123'))
+      .resolves
+      .toBeUndefined();
+  });
+
 });

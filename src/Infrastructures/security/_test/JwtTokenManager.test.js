@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import InvariantError from '../../../Commons/exceptions/InvariantError.js';
+import AuthenticationError from '../../../Commons/exceptions/AuthenticationError.js';
 import JwtTokenManager from '../JwtTokenManager.js';
 import config from '../../../Commons/config.js';
 
@@ -80,6 +81,19 @@ describe('JwtTokenManager', () => {
 
       // Action & Assert
       expect(expectedUsername).toEqual('dicoding');
+    });
+
+    it('should throw AuthenticationError when token payload invalid', async () => {
+      // Arrange
+      const mockJwtToken = {
+        decode: vi.fn().mockImplementation(() => null),
+      };
+      const jwtTokenManager = new JwtTokenManager(mockJwtToken);
+
+      // Action & Assert
+      await expect(jwtTokenManager.decodePayload('invalid_token'))
+        .rejects
+        .toThrow(AuthenticationError);
     });
   });
 });

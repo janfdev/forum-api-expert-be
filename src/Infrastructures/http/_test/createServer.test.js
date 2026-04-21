@@ -32,6 +32,19 @@ describe('HTTP server', () => {
   });
 
   describe('when POST /users', () => {
+    it('should response 400 when request body is malformed JSON', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/users')
+        .set('Content-Type', 'application/json')
+        .send('{"username":');
+
+      expect(response.status).toEqual(400);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('request body harus berupa JSON yang valid');
+    });
+
     it('should response 201 and persisted user', async () => {
       // Arrange
       const requestPayload = {
@@ -407,6 +420,314 @@ describe('HTTP server', () => {
       expect(response.status).toEqual(401);
       expect(response.body.status).toEqual('fail');
       expect(response.body.message).toEqual('Missing authentication');
+    });
+
+    it('should response 403 when access token format invalid', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/threads')
+        .set('Authorization', 'Basic invalidtoken')
+        .send({ title: 'sebuah thread', body: 'isi thread' });
+
+      expect(response.status).toEqual(403);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Anda harus menyertakan access token yang valid');
+    });
+  });
+
+  describe('when GET /threads/{threadId}', () => {
+    it('should response 200 and the thread', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        title: 'sebuah thread',
+        body: 'isi thread',
+        owner: 'user-123',
+      });
+
+      const app = await createServer(container);
+
+      const response = await request(app).get('/threads/thread-123');
+
+      expect(response.status).toEqual(200);
+      expect(response.body.status).toEqual('success');
+      expect(response.body.data.thread).toBeDefined();
+      expect(response.body.data.thread.id).toEqual('thread-123');
+      expect(response.body.data.thread.title).toEqual('sebuah thread');
+      expect(response.body.data.thread.body).toEqual('isi thread');
+      expect(response.body.data.thread.username).toEqual('dicoding');
+    });
+
+    it('should response 404 when thread not found', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app).get('/threads/thread-404');
+
+      expect(response.status).toEqual(404);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('thread tidak ditemukan');
+    });
+
+    it('should mask deleted comment content in thread detail', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        owner: 'user-123',
+      });
+
+      await CommentTableTestHelper.addComment({
+        id: 'comment-123',
+        content: 'komentar lama',
+        owner: 'user-123',
+        threadId: 'thread-123',
+      });
+
+      await CommentTableTestHelper.deleteCommentById('comment-123');
+
+      const app = await createServer(container);
+      const response = await request(app).get('/threads/thread-123');
+
+      expect(response.status).toEqual(200);
+      expect(response.body.data.thread.comments).toHaveLength(1);
+      expect(response.body.data.thread.comments[0].content).toEqual('**komentar telah dihapus**');
+    });
+  });
+
+  describe('when POST /threads/{threadId}/comments', () => {
+    it('should response 201 and persisted comment', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      const accessToken = await container.getInstance(AuthenticationTokenManager.name)
+        .createAccessToken({
+          id: 'user-123',
+          username: 'dicoding',
+        });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        title: 'sebuah thread',
+        body: 'isi thread',
+        owner: 'user-123',
+      });
+
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/threads/thread-123/comments')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: 'sebuah komentar' });
+
+      expect(response.status).toEqual(201);
+      expect(response.body.status).toEqual('success');
+      expect(response.body.data.addedComment).toBeDefined();
+      expect(response.body.data.addedComment.content).toEqual('sebuah komentar');
+      expect(response.body.data.addedComment.owner).toEqual('user-123');
+
+      const comments = await CommentTableTestHelper.findCommentsByThreadId('thread-123');
+      expect(comments).toHaveLength(1);
+      expect(comments[0]).toMatchObject({
+        content: 'sebuah komentar',
+        owner: 'user-123',
+        threadId: 'thread-123',
+      });
+    });
+
+    it('should response 401 when access token not provided', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/threads/thread-123/comments')
+        .send({ content: 'sebuah komentar' });
+
+      expect(response.status).toEqual(401);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Missing authentication');
+    });
+
+    it('should response 403 when access token format invalid', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/threads/thread-123/comments')
+        .set('Authorization', 'Basic invalidtoken')
+        .send({ content: 'sebuah komentar' });
+
+      expect(response.status).toEqual(403);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Anda harus menyertakan access token yang valid');
+    });
+
+    it('should response 404 when thread not found', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      const accessToken = await container.getInstance(AuthenticationTokenManager.name)
+        .createAccessToken({
+          id: 'user-123',
+          username: 'dicoding',
+        });
+
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .post('/threads/thread-404/comments')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: 'sebuah komentar' });
+
+      expect(response.status).toEqual(404);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('thread tidak ditemukan');
+    });
+  });
+
+  describe('when DELETE /threads/{threadId}/comments/{commentId}', () => {
+    it('should response 200 and soft delete the comment', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      const accessToken = await container.getInstance(AuthenticationTokenManager.name)
+        .createAccessToken({
+          id: 'user-123',
+          username: 'dicoding',
+        });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        title: 'sebuah thread',
+        body: 'isi thread',
+        owner: 'user-123',
+      });
+
+      await CommentTableTestHelper.addComment({
+        id: 'comment-123',
+        content: 'sebuah komentar',
+        threadId: 'thread-123',
+        owner: 'user-123',
+      });
+
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .delete('/threads/thread-123/comments/comment-123')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send();
+
+      expect(response.status).toEqual(200);
+      expect(response.body.status).toEqual('success');
+
+      const comments = await CommentTableTestHelper.findCommentsByThreadId('thread-123');
+      expect(comments).toHaveLength(1);
+      expect(comments[0].isDelete).toBe(true);
+    });
+
+    it('should response 401 when access token not provided', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .delete('/threads/thread-123/comments/comment-123')
+        .send();
+
+      expect(response.status).toEqual(401);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Missing authentication');
+    });
+
+    it('should response 403 when access token format invalid', async () => {
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .delete('/threads/thread-123/comments/comment-123')
+        .set('Authorization', 'Basic invalidtoken')
+        .send();
+
+      expect(response.status).toEqual(403);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Anda harus menyertakan access token yang valid');
+    });
+
+    it('should response 404 when comment not found', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        owner: 'user-123',
+      });
+
+      const accessToken = await container.getInstance(AuthenticationTokenManager.name)
+        .createAccessToken({
+          id: 'user-123',
+          username: 'dicoding',
+        });
+
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .delete('/threads/thread-123/comments/comment-404')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send();
+
+      expect(response.status).toEqual(404);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('comment tidak ditemukan');
+    });
+
+    it('should response 403 when deleting comment from another owner', async () => {
+      await UsersTableTestHelper.addUser({
+        id: 'user-123',
+        username: 'dicoding',
+      });
+      await UsersTableTestHelper.addUser({
+        id: 'user-456',
+        username: 'johndoe',
+      });
+
+      await ThreadsTableTestHelper.addThread({
+        id: 'thread-123',
+        owner: 'user-123',
+      });
+
+      await CommentTableTestHelper.addComment({
+        id: 'comment-123',
+        content: 'sebuah komentar',
+        threadId: 'thread-123',
+        owner: 'user-123',
+      });
+
+      const accessToken = await container.getInstance(AuthenticationTokenManager.name)
+        .createAccessToken({
+          id: 'user-456',
+          username: 'johndoe',
+        });
+
+      const app = await createServer(container);
+
+      const response = await request(app)
+        .delete('/threads/thread-123/comments/comment-123')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send();
+
+      expect(response.status).toEqual(403);
+      expect(response.body.status).toEqual('fail');
+      expect(response.body.message).toEqual('Anda tidak berhak mengakses resource ini');
     });
   });
 
