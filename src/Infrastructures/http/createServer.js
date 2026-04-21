@@ -1,5 +1,7 @@
 import express from 'express';
 import { rateLimit } from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+import specs from './swagger.js';
 import ClientError from '../../Commons/exceptions/ClientError.js';
 import DomainErrorTranslator from '../../Commons/exceptions/DomainErrorTranslator.js';
 import users from '../../Interfaces/http/api/users/index.js';
@@ -9,6 +11,9 @@ import comments from '../../Interfaces/http/api/comments/index.js';
 
 const createServer = async (container) => {
   const app = express();
+
+  // Swagger Documentation
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
   // Rate limiting for /threads resource
   const threadsLimiter = rateLimit({

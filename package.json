@@ -27,7 +27,9 @@
     "instances-container": "^2.0.6",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.0.9",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",

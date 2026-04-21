@@ -12,6 +12,33 @@ class ThreadsHandler {
     this.getThreadDetailHandler = this.getThreadDetailHandler.bind(this);
   }
 
+  /**
+   * @openapi
+   * /threads:
+   *   post:
+   *     summary: Add a new thread
+   *     security:
+   *       - bearerAuth: []
+   *     tags: [Threads]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               title:
+   *                 type: string
+   *               body:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Thread added successfully
+   *       400:
+   *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   */
   async postThreadHandler(req, res, next) {
     try {
       const accessToken = this._getAccessToken(req);
@@ -35,6 +62,24 @@ class ThreadsHandler {
     }
   }
 
+  /**
+   * @openapi
+   * /threads/{threadId}:
+   *   get:
+   *     summary: Get thread detail
+   *     tags: [Threads]
+   *     parameters:
+   *       - in: path
+   *         name: threadId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: OK
+   *       404:
+   *         description: Thread not found
+   */
   async getThreadDetailHandler(req, res, next) {
     try {
       const { threadId } = req.params;
