@@ -33,7 +33,7 @@ const createServer = async (container) => {
   app.use(express.json());
 
   app.get('/', (req, res) => {
-    res.status(203).json({
+    res.status(200).json({
       status: 'success',
       data: 'Hello world!',
     });
