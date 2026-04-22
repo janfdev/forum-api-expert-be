@@ -7,7 +7,7 @@ const start = async () => {
   const app = await createServer(container);
   const { host, port } = config.app;
 
-  // Test Github Action 22
+  // Test Github Action 2222
   app.listen(port, host, () => {
     console.log(`server start at http://${host}:${port}`);
   });
