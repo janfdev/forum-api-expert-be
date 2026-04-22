@@ -1,5 +1,4 @@
 import request from 'supertest';
-import pool from '../../database/postgres/pool.js';
 import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
 import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
 import ThreadsTableTestHelper from '../../../../tests/ThreadsTableTestHelper.js';
@@ -9,10 +8,6 @@ import createServer from '../createServer.js';
 import AuthenticationTokenManager from '../../../Applications/security/AuthenticationTokenManager.js';
 
 describe('HTTP server', () => {
-  afterAll(async () => {
-    await pool.end();
-  });
-
   afterEach(async () => {
     await CommentTableTestHelper.cleanTable();
     await ThreadsTableTestHelper.cleanTable();
@@ -157,6 +152,20 @@ describe('HTTP server', () => {
       expect(response.status).toEqual(400);
       expect(response.body.status).toEqual('fail');
       expect(response.body.message).toEqual('username tidak tersedia');
+    });
+  });
+
+  describe('when GET /', () => {
+    it('should return 200 and hello world', async () => {
+      // Arrange
+      const app = await createServer({});
+
+      // Action
+      const response = await request(app).get('/');
+
+      // Assert
+      expect(response.status).toEqual(200);
+      expect(response.body.data).toEqual('Hello world!');
     });
   });
 

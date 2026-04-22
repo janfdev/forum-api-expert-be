@@ -8,10 +8,6 @@ describe('AuthenticationRepository postgres', () => {
     await AuthenticationsTableTestHelper.cleanTable();
   });
 
-  afterAll(async () => {
-    await pool.end();
-  });
-
   describe('addToken function', () => {
     it('should add token to database', async () => {
       // Arrange
