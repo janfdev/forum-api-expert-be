@@ -32,11 +32,18 @@ const createServer = async (container) => {
   // Middleware for parsing JSON
   app.use(express.json());
 
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      data: 'Hello world!',
+    });
+  });
+
   // Register routes
   app.use('/users', users(container));
   app.use('/authentications', authentications(container));
   app.use('/threads', threadsLimiter, threads(container));
-  app.use('/threads/:threadId/comments', threadsLimiter, comments(container));
+  app.use('/threads', threadsLimiter, comments(container));
 
   // Global error handler
   app.use((error, req, res, next) => {

@@ -1,10 +1,10 @@
 import express from 'express';
 
 const createCommentsRouter = (handler) => {
-  const router = express.Router({ mergeParams: true });
+  const router = express.Router();
 
-  router.post('/', handler.postCommentHandler);
-  router.delete('/:commentId', handler.deleteCommentHandler);
+  router.post('/:threadId/comments', handler.postCommentHandler);
+  router.delete('/:threadId/comments/:commentId', handler.deleteCommentHandler);
 
   return router;
 };

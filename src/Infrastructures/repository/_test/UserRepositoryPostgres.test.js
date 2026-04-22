@@ -10,10 +10,6 @@ describe('UserRepositoryPostgres', () => {
     await UsersTableTestHelper.cleanTable();
   });
 
-  afterAll(async () => {
-    await pool.end();
-  });
-
   describe('verifyAvailableUsername function', () => {
     it('should throw InvariantError when username not available', async () => {
       // Arrange
